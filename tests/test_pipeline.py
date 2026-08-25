@@ -351,9 +351,21 @@ def test_twilio_notifier_send_with_mock():
         assert sid == "SM123456789"
 
 
+def test_drive_extract_folder_id():
+    """Test extracting clean folder ID from raw ID and sharing URLs."""
+    raw_id = "1M2sV8m9DSvqsuyas8J-CTkBCxuCexgTg"
+    url = "https://drive.google.com/drive/folders/1M2sV8m9DSvqsuyas8J-CTkBCxuCexgTg?usp=sharing"
+    assert DriveClient.extract_folder_id(raw_id) == "1M2sV8m9DSvqsuyas8J-CTkBCxuCexgTg"
+    assert DriveClient.extract_folder_id(url) == "1M2sV8m9DSvqsuyas8J-CTkBCxuCexgTg"
+    assert DriveClient.extract_folder_id(None) is None
+
+
 def test_drive_client_upload_with_mock():
     """Test DriveClient upload and folder hierarchy creation with mocked Drive service."""
-    drive = DriveClient(client_secret_path="dummy.json")
+    drive = DriveClient(
+        client_secret_path="dummy.json",
+        root_folder_id="1M2sV8m9DSvqsuyas8J-CTkBCxuCexgTg",
+    )
     mock_service = MagicMock()
 
     # Mock list (folder check) -> empty, so creates folder

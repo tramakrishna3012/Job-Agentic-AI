@@ -1,13 +1,14 @@
 """
 DriveClient module.
 Interacts with Google Drive API using the restricted 'drive.file' OAuth scope
-to organize, upload, and update tailored resumes under /JobApplications/{Company}/{CandidateName}.pdf.
+to organize, upload, and update tailored resumes under /{RootFolder}/{Company}/{CandidateName}.pdf.
 """
 
 from __future__ import annotations
 
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -30,12 +31,26 @@ class DriveClient:
         self,
         client_secret_path: Optional[str] = None,
         token_path: str = "token.json",
+        root_folder_id: Optional[str] = None,
     ) -> None:
         self.client_secret_path = client_secret_path or os.getenv(
             "GOOGLE_OAUTH_CLIENT_SECRET_PATH", "credentials.json"
         )
         self.token_path = Path(token_path)
+        self.root_folder_id = root_folder_id or os.getenv("GOOGLE_DRIVE_ROOT_FOLDER_ID")
         self._service = None
+
+    @staticmethod
+    def extract_folder_id(folder_str: Optional[str]) -> Optional[str]:
+        """Extract Google Drive folder ID from raw ID or sharing URL."""
+        if not folder_str:
+            return None
+        folder_str = folder_str.strip()
+        if "/folders/" in folder_str:
+            match = re.search(r"/folders/([a-zA-Z0-9_-]+)", folder_str)
+            if match:
+                return match.group(1)
+        return folder_str
 
     def authenticate(self) -> None:
         """Authenticate with Google OAuth 2.0 and cache token locally."""
@@ -131,7 +146,7 @@ class DriveClient:
         existing_file_id: Optional[str] = None,
     ) -> Tuple[str, str]:
         """
-        Upload or update a resume PDF under /JobApplications/{Company}/{CandidateName}.pdf.
+        Upload or update a resume PDF under /{RootFolder}/{Company}/{CandidateName}.pdf.
         Returns: (file_id, web_view_link)
         """
         pdf_path = Path(local_pdf_path)
@@ -167,9 +182,13 @@ class DriveClient:
                     f"Could not update file by ID {existing_file_id}: {exc}. Checking folder."
                 )
 
-        # Ensure folder hierarchy: /JobApplications/{Company}
-        root_app_folder_id = self._find_or_create_folder("JobApplications")
-        company_folder_id = self._find_or_create_folder(company, parent_id=root_app_folder_id)
+        # Determine parent root folder
+        clean_root_id = self.extract_folder_id(self.root_folder_id)
+        if not clean_root_id:
+            clean_root_id = self._find_or_create_folder("JobApplications")
+
+        # Ensure company folder hierarchy inside target root folder
+        company_folder_id = self._find_or_create_folder(company, parent_id=clean_root_id)
 
         # Check if file with same name exists in company folder
         file_query = (
