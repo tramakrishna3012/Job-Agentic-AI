@@ -102,7 +102,7 @@ class TailorEngine:
         if self.model:
             return self.model
         if self.provider == "gemini":
-            return os.getenv("GEMINI_MODEL", "gemini-3.7-flash")
+            return os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
         return os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
     @staticmethod
