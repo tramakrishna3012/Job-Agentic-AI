@@ -27,6 +27,11 @@ temp_*.html
 temp_*.pdf
 output/
 
+# Frontend Next.js build artifacts & node_modules
+dashboard/node_modules/
+dashboard/.next/
+dashboard/out/
+
 # OS specific
 .DS_Store
 Thumbs.db

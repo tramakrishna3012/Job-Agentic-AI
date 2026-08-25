@@ -1,8 +1,8 @@
 # Security
 
 ## 1. Secrets
-- All API keys/tokens (`OPENAI_API_KEY`, `GEMINI_API_KEY`, `TWILIO_*`, `CALLMEBOT_*`, `NTFY_*`) live in `.env`, loaded via `python-dotenv`. `.env` is in `.gitignore` from the very first commit.
-- Never hardcode secrets in source, notebooks, or committed config files. `GEMINI_API_KEY` follows the exact same handling rules as all other API keys (environment variable only, never logged, never committed).
+- All API keys/tokens (`OPENAI_API_KEY`, `GEMINI_API_KEY`, `DASHBOARD_TOKEN`, `TWILIO_*`, `CALLMEBOT_*`, `NTFY_*`) live in `.env`, loaded via `python-dotenv`. `.env` is in `.gitignore` from the very first commit.
+- Never hardcode secrets in source, notebooks, or committed config files. `GEMINI_API_KEY` and `DASHBOARD_TOKEN` follow the exact same handling rules as all other API keys (environment variable only, never logged, never committed). `DASHBOARD_TOKEN` protects the Phase 1 dashboard from unauthenticated local or remote access.
 - If you later move to a shared repo or hosted runner (GitHub Actions), use encrypted repo secrets — never a checked-in `.env`.
 
 ## 2. Google Drive
