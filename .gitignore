@@ -32,6 +32,11 @@ dashboard/node_modules/
 dashboard/.next/
 dashboard/out/
 
+# Design raw dumps and temp inspectors
+stitch_design/
+inspect_ui_folder.py
+*.png
+
 # OS specific
 .DS_Store
 Thumbs.db
