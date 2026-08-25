@@ -54,3 +54,28 @@ All loaded via `.env` (python-dotenv). `.env` is in `.gitignore` from the first 
 - Log stage transitions and timestamps only.
 - Never log full resume content or full JD text (see security.md) — snippet/hash only.
 - Log file stays local, never uploaded anywhere.
+
+## 8. Phase 1 additions — Dashboard (API + frontend)
+Phase 0 stays exactly as built. Phase 1 adds two new pieces on top, both reading the same `jaa.db` SQLite file the CLI already writes to — no data migration needed.
+
+```
+Next.js frontend (matches Stitch design)
+  -> FastAPI backend (REST API over jaa.db)
+       -> SQLite (jaa.db) — same file jaa.py already writes
+```
+
+**Backend: FastAPI**, not Flask, for this piece specifically — Phase 1 needs typed JSON responses for a React frontend to consume, and FastAPI's automatic request/response validation (Pydantic) plus auto-generated OpenAPI docs make the frontend integration faster to get right and easier to keep in sync as fields change. Flask remains fine for anything Phase 0-side; this isn't a project-wide switch.
+
+**Frontend: Next.js (React)** — matches what Stitch exports, so your existing design work carries over directly instead of being rebuilt from scratch.
+
+**Where it runs:** still local, still your machine, still zero paid infra. Build the Next.js app (`next build`) and have FastAPI serve both the API routes and the built frontend from one process on one port. One thing to run, one thing to secure, no separate frontend server to manage.
+
+**Auth:** this is now a real web app, not a CLI script, so `security.md`'s "no unauthenticated dashboard" rule applies. Simplest adequate approach for a single-user tool: a shared secret token in `.env` (`DASHBOARD_TOKEN`), checked by FastAPI middleware on every route, entered once in the frontend and stored in an httpOnly cookie. No user accounts, no password reset flow, no OAuth — that's over-engineering for an audience of one. If you never expose this beyond `localhost`, the token is a second layer, not the only one; if you ever tunnel it out (e.g. to check from your phone), the token becomes load-bearing, so treat `DASHBOARD_TOKEN` with the same care as the other secrets in `.env`.
+
+**API surface (v1):**
+- `GET /api/applications` — list all applications, supports `?status=` filter
+- `GET /api/applications/{id}` — single application detail
+- `PATCH /api/applications/{id}` — update status only (Applied/Interview/Rejected/Offer) — the one write endpoint Phase 1 needs
+- `GET /api/stats` — counts by status, for any summary cards in the design
+
+No endpoint touches Drive, OpenAI/Gemini, or Twilio — the dashboard only ever reads/updates `jaa.db`. That keeps the blast radius of a frontend bug small.

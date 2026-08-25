@@ -11,13 +11,15 @@
 
 **Exit condition to move to Phase 1:** you've run it on 5+ real applications and trust the output enough to actually send it.
 
-## Phase 1 — Tracking Dashboard (target: 1 week part-time)
-**Scope:** lightweight local web UI (Streamlit or Flask) reading the SQLite DB — status per application, follow-up due dates, resume version links.
+## Phase 1 — Tracking Dashboard (target: 1.5–2 weeks part-time)
+**Scope:** FastAPI backend (read/write over the existing `jaa.db`) + Next.js frontend matching your Stitch design. See `architecture.md` section 8 and `design.md` for the API contract and layout.
 
 **Acceptance criteria:**
 - [ ] See all applications in one table, filterable by status
-- [ ] Mark status manually (Applied / Interview / Rejected / Offer)
+- [ ] Mark status manually (Applied / Interview / Rejected / Offer) via the one PATCH endpoint
 - [ ] Follow-up reminder surfaced after N days with no status change
+- [ ] Dashboard requires the shared `DASHBOARD_TOKEN` to load — no unauthenticated access
+- [ ] Runs as a single local process (FastAPI serving the built Next.js app) on one port
 
 ## Phase 2 — Faster Discovery (target: 1–2 weeks, only after Phase 0/1 prove valuable)
 **Scope:** read-only, anonymous/public sources only — RSS feeds, your own Gmail job-alert emails (via Gmail API — this is your inbox, not scraping a platform), public company career-page diffs.

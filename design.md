@@ -56,11 +56,32 @@ python jaa.py --company "Acme Corp" --role "Backend Engineer" --jd jd.txt
 ```
 Prints progress inline (tailoring... rendering... uploading... notifying...) so any failure is immediately locatable to a stage.
 
-## 7. Phase 1 Dashboard (placeholder, pending Stitch reconciliation)
-Minimum viable layout:
+## 7. Phase 1 Dashboard
+
+> Still pending: I haven't been able to pull your actual Stitch mockup (Drive access keeps failing on my end). Everything below is the data contract the frontend needs to satisfy, regardless of visual design — export your Stitch screens/code when you can and I'll reconcile the visual details against this.
+
+**Minimum viable layout (functional requirements, not visual spec):**
 - Table view: Company | Role | Date Applied | Status | Match Score | Resume Link
 - Filter by status (Applied / Interview / Rejected / Offer)
 - Row-level "days since last update" to surface follow-ups due
+- A simple token-entry gate before the dashboard loads (see architecture.md section 8 — `DASHBOARD_TOKEN`)
+
+**API contract the frontend consumes** (see architecture.md section 8 for full detail):
+```
+GET  /api/applications?status=Applied
+     -> [{ id, company, role, date_applied, status, match_score, drive_link, days_since_update }]
+
+GET  /api/applications/{id}
+     -> { id, company, role, date_applied, status, match_score, drive_link, jd_hash, fit_summary }
+
+PATCH /api/applications/{id}
+      body: { status: "Interview" }
+      -> updated record
+
+GET  /api/stats
+     -> { applied: N, interview: N, rejected: N, offer: N }
+```
+Build the frontend against this contract now; swap in your Stitch-exact components/styling once the export is available — the data shape shouldn't need to change either way.
 
 ## 8. Portfolio Website (later, optional — not in MVP)
 If added: a static site generator (Astro/Eleventy) reading the same applications data to show something like "recently applied to" or a projects section. Deliberately excluded from MVP scope.
