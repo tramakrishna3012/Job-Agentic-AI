@@ -2,7 +2,7 @@
 """
 Job Application Assistant (JAA) - Phase 0 CLI Orchestrator.
 Automates the resume tailoring, PDF generation, Google Drive filing,
-SQLite tracking, and Twilio WhatsApp notification pipeline.
+SQLite tracking, and notification pipeline.
 
 Usage:
   python jaa.py --company "Acme Corp" --role "Backend Engineer" --jd jd.txt
@@ -19,6 +19,14 @@ import tempfile
 import time
 from pathlib import Path
 from typing import Optional
+
+# Ensure UTF-8 output encoding on Windows consoles
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 from dotenv import load_dotenv
 
@@ -133,7 +141,8 @@ def run_pipeline(
     candidate_name = master_resume.get("name", "Resume")
 
     # 2. Stage 1: Tailoring via OpenAI
-    print(f"\n[1/5] 🤖 Tailoring resume with OpenAI (strict truthfulness contract)...")
+    model_name = os.getenv("OPENAI_MODEL", "gpt-4o")
+    print(f"\n[1/5] 🤖 Tailoring resume with OpenAI ({model_name}, strict truthfulness contract)...")
     tailor_start = time.time()
     try:
         tailored_resume, fit_summary, match_score = tailor_engine.tailor_resume(
@@ -150,7 +159,7 @@ def run_pipeline(
         sys.exit(1)
 
     # 3. Stage 2: Render ATS-safe PDF
-    print(f"\n[2/5] 📄 Rendering ATS-safe PDF with Jinja2 + WeasyPrint...")
+    print(f"\n[2/5] 📄 Rendering ATS-safe PDF with Jinja2...")
     render_start = time.time()
     temp_pdf_file = None
     try:
@@ -158,7 +167,6 @@ def run_pipeline(
         if output_pdf_path:
             pdf_dest = output_pdf_path
         else:
-            # Create a temporary PDF file
             temp_dir = tempfile.gettempdir()
             safe_comp = "".join(c for c in company if c.isalnum() or c in (" ", "_", "-")).strip()
             pdf_dest = os.path.join(temp_dir, f"{safe_comp}_{candidate_name.replace(' ', '_')}.pdf")
@@ -217,24 +225,24 @@ def run_pipeline(
         print(f"      ❌ Stage 4 (SQLite Tracking) failed: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    # 6. Stage 5: WhatsApp Notification via Twilio
+    # 6. Stage 5: Push Notification
     if dry_run:
-        print(f"\n[5/5] 📱 [DRY-RUN] Skipping WhatsApp notification.")
+        print(f"\n[5/5] 📱 [DRY-RUN] Skipping push notification.")
     else:
-        print(f"\n[5/5] 📱 Sending WhatsApp notification via Twilio...")
+        print(f"\n[5/5] 📱 Sending notification via {os.getenv('NTFY_TOPIC', 'ntfy')}...")
         notify_start = time.time()
         try:
             notifier = Notifier()
-            msg_sid = notifier.send_notification(
+            ref_id = notifier.send_notification(
                 role=role,
                 company=company,
                 match_score=match_score,
                 fit_summary=fit_summary,
                 drive_link=drive_link,
             )
-            print(f"      ✓ WhatsApp sent! (Message SID: {msg_sid}) in {time.time() - notify_start:.2f}s")
+            print(f"      ✓ Notification sent! (Ref: {ref_id}) in {time.time() - notify_start:.2f}s")
         except Exception as exc:
-            print(f"      ❌ Stage 5 (WhatsApp Notification) failed: {exc}", file=sys.stderr)
+            print(f"      ❌ Stage 5 (Notification) failed: {exc}", file=sys.stderr)
             sys.exit(1)
 
     # Pipeline Completion
