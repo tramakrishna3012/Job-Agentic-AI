@@ -1,0 +1,32 @@
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+token.json
+credentials*.json
+client_secret*.json
+
+# SQLite Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Python cache & virtual environment
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+.ruff_cache/
+
+# Generated PDF outputs & temporary files
+*.pdf
+temp_*.html
+temp_*.pdf
+output/
+
+# OS specific
+.DS_Store
+Thumbs.db
