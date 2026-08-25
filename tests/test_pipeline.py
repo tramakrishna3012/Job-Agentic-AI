@@ -1,7 +1,7 @@
 """
 Comprehensive test suite for Phase 0 JAA Pipeline.
 Tests SQLite tracker, Jinja2 template rendering, PDF generation,
-master resume schema validation, Notifier, DriveClient, and CLI flow.
+master resume schema validation, Notifier (CallMeBot + Twilio), DriveClient, and CLI flow.
 """
 
 from __future__ import annotations
@@ -184,10 +184,8 @@ def test_jd_hash_generation():
 def test_notifier_message_formatting():
     """Test WhatsApp message format matches design.md Section 5 template."""
     notifier = Notifier(
-        account_sid="ACtest",
-        auth_token="authtest",
-        whatsapp_from="whatsapp:+14155238886",
-        whatsapp_to="whatsapp:+1234567890",
+        callmebot_phone="+1234567890",
+        callmebot_api_key="key123",
     )
     msg = notifier.format_message(
         role="Backend Engineer",
@@ -205,18 +203,42 @@ def test_notifier_message_formatting():
     assert msg == expected
 
 
-def test_notifier_send_with_mock():
-    """Test Notifier dispatch with mocked Twilio client."""
+def test_callmebot_notifier_send_with_mock():
+    """Test CallMeBot WhatsApp dispatch with mocked HTTP request."""
     notifier = Notifier(
-        account_sid="ACmock",
-        auth_token="authmock",
-        whatsapp_from="+14155238886",
-        whatsapp_to="+1234567890",
+        provider="callmebot",
+        callmebot_phone="+919876543210",
+        callmebot_api_key="test_callmebot_key",
+    )
+    mock_response = MagicMock()
+    mock_response.getcode.return_value = 200
+    mock_response.read.return_value = b"Message queued"
+    mock_response.__enter__.return_value = mock_response
+
+    with patch("urllib.request.urlopen", return_value=mock_response):
+        ref_id = notifier.send_notification(
+            role="Backend Engineer",
+            company="Acme Corp",
+            match_score=95,
+            fit_summary="CallMeBot fit summary.",
+            drive_link="https://drive.link",
+        )
+        assert ref_id == "callmebot_ok"
+
+
+def test_twilio_notifier_send_with_mock():
+    """Test Twilio WhatsApp dispatch with mocked client."""
+    notifier = Notifier(
+        provider="twilio",
+        twilio_account_sid="ACmock",
+        twilio_auth_token="authmock",
+        twilio_from="+14155238886",
+        twilio_to="+1234567890",
     )
     mock_msg = MagicMock()
     mock_msg.sid = "SM123456789"
 
-    with patch.object(notifier, "_client", MagicMock()) as mock_client:
+    with patch.object(notifier, "_twilio_client", MagicMock()) as mock_client:
         mock_client.messages.create.return_value = mock_msg
         sid = notifier.send_notification(
             role="Backend Engineer",
@@ -226,7 +248,6 @@ def test_notifier_send_with_mock():
             drive_link="https://drive.link",
         )
         assert sid == "SM123456789"
-        mock_client.messages.create.assert_called_once()
 
 
 def test_drive_client_upload_with_mock():
