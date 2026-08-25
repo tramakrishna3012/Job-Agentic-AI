@@ -1,0 +1,64 @@
+name: "Alex Mercer"
+contact:
+  email: "alex.mercer.dev@email.com"
+  phone: "+1 (555) 234-5678"
+  location: "San Francisco, CA"
+  linkedin: "https://linkedin.com/in/alexmercer-dev"
+  portfolio: "https://alexmercer.dev"
+
+summary: >-
+  Senior Backend & Distributed Systems Engineer with 7+ years of experience designing high-throughput microservices,
+  event-driven data pipelines, and scalable cloud infrastructure. Proven track record of reducing p99 latency,
+  optimizing cloud costs, and mentoring cross-functional engineering teams.
+
+experience:
+  - company: "Starlight Cloud Systems"
+    title: "Senior Backend Engineer"
+    dates: "2021 - Present"
+    location: "San Francisco, CA"
+    bullets:
+      - "Architected and deployed a multi-region distributed caching layer in Go and Redis, reducing p99 read latency by 45% across 20M+ daily active sessions."
+      - "Designed asynchronous event processing pipelines using Apache Kafka and Python FastAPI, handling over 150,000 events/second with zero message loss."
+      - "Spearheaded migration of monolithic PostgreSQL databases to partitioned CockroachDB clusters, improving transactional throughput by 60%."
+      - "Established automated CI/CD pipelines with GitHub Actions and Terraform, cutting deployment failure rates from 8% to under 0.5%."
+      - "Mentored 6 junior and mid-level software engineers across backend design patterns, code review best practices, and incident response."
+
+  - company: "Vanguard FinTech Labs"
+    title: "Software Engineer"
+    dates: "2018 - 2021"
+    location: "Austin, TX"
+    bullets:
+      - "Built PCI-compliant payment settlement microservices in Python (Django/FastAPI) and PostgreSQL, processing $12M+ in daily transaction volume."
+      - "Implemented idempotent payment gateway integrations with Stripe and Adyen, eliminating duplicate charge incidents."
+      - "Developed automated unit, integration, and load testing suites with PyTest and Locust, increasing test coverage from 62% to 91%."
+      - "Collaborated with security teams to enforce OAuth 2.0 / OIDC authentication flows and role-based access control (RBAC)."
+
+education:
+  - degree: "Bachelor of Science in Computer Science"
+    institution: "University of Texas at Austin"
+    dates: "2014 - 2018"
+    details: "Dean's Honor List, Concentration in Distributed Systems and Algorithms"
+
+skills:
+  - category: "Languages & Frameworks"
+    items: ["Python", "FastAPI", "Django", "Go (Golang)", "SQL", "TypeScript", "Node.js"]
+  - category: "Distributed Systems & Data"
+    items: ["PostgreSQL", "Redis", "Apache Kafka", "CockroachDB", "RabbitMQ", "MongoDB"]
+  - category: "Cloud & Infrastructure"
+    items: ["AWS (ECS, S3, RDS, Lambda)", "Docker", "Kubernetes", "Terraform", "GitHub Actions", "Linux"]
+  - category: "Core Practices"
+    items: ["Microservices Architecture", "RESTful APIs", "gRPC", "CI/CD", "System Design", "TDD"]
+
+projects:
+  - name: "VectorFlow"
+    link: "https://github.com/alexmercer/vectorflow"
+    description: "Lightweight embedding pipeline for real-time document search."
+    bullets:
+      - "Engineered an asynchronous vector indexing engine in Python and Qdrant, achieving sub-50ms semantic search across 5M vectors."
+      - "Packaged as a lightweight Docker container with built-in Prometheus metrics and OpenTelemetry tracing."
+
+  - name: "Distributed Lock Manager (DLM)"
+    link: "https://github.com/alexmercer/dist-lock"
+    description: "Redlock-compatible distributed locking library for Python."
+    bullets:
+      - "Implemented fault-tolerant distributed locking using Redis clusters with automatic lease renewals and deadlock detection."

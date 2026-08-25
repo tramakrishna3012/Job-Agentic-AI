@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ resume.name }} - Resume</title>
+  <style>
+    @page {
+      size: letter;
+      margin: 0.5in 0.6in;
+    }
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 10pt;
+      line-height: 1.35;
+      color: #111111;
+      margin: 0;
+      padding: 0;
+    }
+    h1 {
+      font-size: 18pt;
+      font-weight: bold;
+      text-align: center;
+      margin: 0 0 3pt 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .contact-info {
+      text-align: center;
+      font-size: 9.5pt;
+      margin-bottom: 10pt;
+      color: #222222;
+    }
+    .section-title {
+      font-size: 11pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      border-bottom: 1px solid #333333;
+      padding-bottom: 2pt;
+      margin-top: 8pt;
+      margin-bottom: 4pt;
+      letter-spacing: 0.5px;
+    }
+    .summary-text {
+      margin: 0 0 4pt 0;
+      text-align: justify;
+    }
+    .item-header {
+      width: 100%;
+      margin-top: 4pt;
+      margin-bottom: 1pt;
+    }
+    .item-title-group {
+      font-size: 10pt;
+    }
+    .item-bold {
+      font-weight: bold;
+    }
+    .item-italic {
+      font-style: italic;
+    }
+    .item-meta {
+      font-size: 9pt;
+      float: right;
+      text-align: right;
+    }
+    .clearfix {
+      clear: both;
+    }
+    ul {
+      margin: 2pt 0 4pt 0;
+      padding-left: 14pt;
+    }
+    li {
+      margin-bottom: 2pt;
+      text-align: justify;
+    }
+    .skills-group {
+      margin-bottom: 3pt;
+      font-size: 9.5pt;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Candidate Name -->
+  <h1>{{ resume.name }}</h1>
+
+  <!-- Contact Bar (ATS Top Body, no headers/footers) -->
+  <div class="contact-info">
+    {% set items = [] %}
+    {% if resume.contact.location %}{% set _ = items.append(resume.contact.location) %}{% endif %}
+    {% if resume.contact.phone %}{% set _ = items.append(resume.contact.phone) %}{% endif %}
+    {% if resume.contact.email %}{% set _ = items.append(resume.contact.email) %}{% endif %}
+    {% if resume.contact.linkedin %}{% set _ = items.append(resume.contact.linkedin | replace('https://', '') | replace('http://', '')) %}{% endif %}
+    {% if resume.contact.portfolio %}{% set _ = items.append(resume.contact.portfolio | replace('https://', '') | replace('http://', '')) %}{% endif %}
+    {{ items | join(' | ') }}
+  </div>
+
+  <!-- Summary Section -->
+  {% if resume.summary %}
+  <div class="section-title">Summary</div>
+  <p class="summary-text">{{ resume.summary }}</p>
+  {% endif %}
+
+  <!-- Experience Section -->
+  {% if resume.experience %}
+  <div class="section-title">Experience</div>
+  {% for exp in resume.experience %}
+  <div class="item-header">
+    <div class="item-meta">
+      {% if exp.location %}{{ exp.location }} | {% endif %}{{ exp.dates }}
+    </div>
+    <div class="item-title-group">
+      <span class="item-bold">{{ exp.company }}</span>{% if exp.title %} &mdash; <span class="item-italic">{{ exp.title }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="clearfix"></div>
+  {% if exp.bullets %}
+  <ul>
+    {% for bullet in exp.bullets %}
+    <li>{{ bullet }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% endfor %}
+  {% endif %}
+
+  <!-- Skills Section -->
+  {% if resume.skills %}
+  <div class="section-title">Skills</div>
+  {% for skill in resume.skills %}
+    {% if skill is mapping %}
+    <div class="skills-group">
+      {% if skill.category %}<strong>{{ skill.category }}:</strong> {% endif %}
+      {% if skill['items'] is sequence and skill['items'] is not string %}
+        {{ skill['items'] | join(', ') }}
+      {% else %}
+        {{ skill['items'] }}
+      {% endif %}
+    </div>
+    {% elif skill is string %}
+    <div class="skills-group">{{ skill }}</div>
+    {% endif %}
+  {% endfor %}
+  {% endif %}
+
+  <!-- Projects Section -->
+  {% if resume.projects %}
+  <div class="section-title">Projects</div>
+  {% for proj in resume.projects %}
+  <div class="item-header">
+    {% if proj.description %}
+    <div class="item-meta item-italic">{{ proj.description }}</div>
+    {% endif %}
+    <div class="item-title-group">
+      <span class="item-bold">{{ proj.name }}</span>{% if proj.link %} ({{ proj.link | replace('https://', '') | replace('http://', '') }}){% endif %}
+    </div>
+  </div>
+  <div class="clearfix"></div>
+  {% if proj.bullets %}
+  <ul>
+    {% for bullet in proj.bullets %}
+    <li>{{ bullet }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% endfor %}
+  {% endif %}
+
+  <!-- Education Section -->
+  {% if resume.education %}
+  <div class="section-title">Education</div>
+  {% for edu in resume.education %}
+  <div class="item-header">
+    <div class="item-meta">{{ edu.dates }}</div>
+    <div class="item-title-group">
+      <span class="item-bold">{{ edu.institution }}</span>{% if edu.degree %} &mdash; <span class="item-italic">{{ edu.degree }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="clearfix"></div>
+  {% if edu.details %}
+  <div style="font-size: 9.5pt; margin-top: 1pt; margin-bottom: 3pt;">{{ edu.details }}</div>
+  {% endif %}
+  {% endfor %}
+  {% endif %}
+
+</body>
+</html>

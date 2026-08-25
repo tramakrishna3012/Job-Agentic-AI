@@ -1,0 +1,26 @@
+# Cursor Rules — Job Application Assistant (JAA)
+
+## Project Context
+Personal, single-user Python CLI tool. Tailors a resume to a job description, saves it to Google Drive, logs it to SQLite, and notifies via WhatsApp. Read `PRD.md`, `architecture.md`, `design.md`, and `security.md` before making any structural change.
+
+## Non-negotiable rules
+1. **Never hardcode API keys, tokens, or secrets in any file.** Always read from environment variables via `.env` (python-dotenv). If new code needs a credential, add it to `.env.example` with a placeholder, never a real value.
+2. **The tailoring prompt (TailorEngine) must never let the LLM invent resume content.** Any change to that prompt must preserve the "only reorder/reword facts already present in the source resume JSON" constraint.
+3. **Never log full resume text or full job description text**, to console or file. Snippet/hash only — see `security.md`.
+4. **Never add code that logs into LinkedIn, Naukri, Wellfound, or any job platform programmatically, or that stores a session cookie for one.** This is out of scope by design (see `PRD.md` Non-Goals), not an oversight to "fix."
+5. **Any Google Drive scope request must stay at `drive.file`.** Do not widen to full Drive access.
+6. **Don't add new external dependencies without checking whether the stdlib or an existing dependency already covers it.** Keep this a small, auditable codebase.
+
+## Code style
+- Python 3.11+, type hints on all function signatures.
+- Format with `black`, lint with `ruff`.
+- One module per concern: `tailor.py`, `render.py`, `drive_client.py`, `tracker.py`, `notify.py`, orchestrated by `jaa.py`. Don't collapse these into one file as the project grows.
+- Every external API call (OpenAI, Google, Twilio) wrapped in a small client function with explicit error handling — no bare API calls scattered through business logic.
+
+## Testing
+- Any change to `tailor.py`'s prompt logic should include a manual spot-check note in the commit/PR confirming no fabricated content appeared in a sample output.
+- Worth having real unit tests for `render.py` (does the template fill correctly) and `tracker.py` (does the DB read/write correctly) — mock the OpenAI/Drive/Twilio calls rather than hitting real APIs in tests.
+
+## Git hygiene
+- `.env`, `token.json` (Google OAuth token), and `*.db` (SQLite) are in `.gitignore` from commit 1.
+- Commit messages describe the "why," not just the "what" — this is a project you'll revisit after a hiring gap; leave yourself context.

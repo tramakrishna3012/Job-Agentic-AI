@@ -1,0 +1,19 @@
+Company: CloudScale Infrastructure Inc.
+Position: Senior Distributed Systems Engineer
+
+About the Role:
+We are seeking an experienced Senior Backend / Distributed Systems Engineer to design, build, and maintain our global distributed infrastructure. You will work on real-time event-driven data streaming, high-throughput caching systems, and multi-region database architectures.
+
+Key Responsibilities:
+- Design and scale distributed caching layers (Redis / Memcached) handling millions of operations per second.
+- Build resilient event-driven pipelines using Apache Kafka and Python (FastAPI / asyncio).
+- Optimize SQL queries and transactional performance on distributed SQL databases (CockroachDB / PostgreSQL).
+- Automate cloud infrastructure using Terraform, Docker, and CI/CD pipelines with GitHub Actions.
+- Provide technical mentorship to engineers across system design, code reviews, and high-availability operations.
+
+Qualifications & Requirements:
+- 5+ years of software engineering experience in Python or Go.
+- Deep expertise in distributed systems, asynchronous event streaming (Kafka), and caching architectures.
+- Strong knowledge of relational database design, query optimization, and transaction isolation.
+- Proficiency with AWS cloud environments, containerization (Docker, Kubernetes), and Infrastructure as Code.
+- B.S. or M.S. in Computer Science or equivalent practical experience.
