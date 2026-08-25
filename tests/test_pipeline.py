@@ -1,11 +1,13 @@
 """
 Comprehensive test suite for Phase 0 JAA Pipeline.
 Tests SQLite tracker, Jinja2 template rendering, PDF generation,
-master resume schema validation, Notifier (ntfy + CallMeBot + Twilio), DriveClient, and CLI flow.
+master resume schema validation, Notifier (ntfy + CallMeBot + Twilio),
+TailorEngine (OpenAI + Gemini providers), DriveClient, and CLI flow.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -18,7 +20,7 @@ from drive_client import DriveClient
 from jaa import run_pipeline
 from notify import Notifier
 from render import ResumeRenderer, render_resume
-from tailor import TailorEngine
+from tailor import GEMINI_OPENAI_BASE_URL, TailorEngine
 from tracker import Tracker
 
 
@@ -181,6 +183,86 @@ def test_jd_hash_generation():
     assert len(h1) == 64
 
 
+def test_tailor_engine_openai_provider_mock(sample_resume_data):
+    """Test TailorEngine with OpenAI provider produces expected return shape."""
+    with patch.dict(os.environ, {"OPENAI_MODEL": "gpt-4o-mini"}):
+        engine = TailorEngine(provider="openai", api_key="sk-test-mock-key")
+        assert engine.provider == "openai"
+        assert engine.active_model == "gpt-4o-mini"
+
+        mock_llm_response = sample_resume_data.copy()
+        mock_llm_response["fit_summary"] = "Strong alignment with backend role."
+        mock_llm_response["match_score"] = 91
+
+        mock_choice = MagicMock()
+        mock_choice.message.content = json.dumps(mock_llm_response)
+        mock_resp = MagicMock()
+        mock_resp.choices = [mock_choice]
+
+        with patch.object(engine, "_client", MagicMock()) as mock_client:
+            mock_client.chat.completions.create.return_value = mock_resp
+            tailored, fit_summary, score = engine.tailor_resume(
+                master_resume=sample_resume_data,
+                jd_text="Need senior Python engineer.",
+                company="Acme Corp",
+                role="Senior Engineer",
+            )
+            assert tailored["name"] == "Jane Doe"
+            assert fit_summary == "Strong alignment with backend role."
+            assert score == 91
+            mock_client.chat.completions.create.assert_called_once()
+
+
+def test_tailor_engine_gemini_provider_mock(sample_resume_data):
+    """Test TailorEngine with Gemini provider produces identical return shape."""
+    with patch.dict(os.environ, {"GEMINI_MODEL": "gemini-3.7-flash"}):
+        engine = TailorEngine(provider="gemini", api_key="AIzaSyTestMockKey")
+        assert engine.provider == "gemini"
+        assert engine.active_model == "gemini-3.7-flash"
+
+        mock_llm_response = sample_resume_data.copy()
+        mock_llm_response["fit_summary"] = "Exceptional fit with distributed systems skills."
+        mock_llm_response["match_score"] = 96
+
+        mock_choice = MagicMock()
+        mock_choice.message.content = json.dumps(mock_llm_response)
+        mock_resp = MagicMock()
+        mock_resp.choices = [mock_choice]
+
+        with patch.object(engine, "_client", MagicMock()) as mock_client:
+            mock_client.chat.completions.create.return_value = mock_resp
+            tailored, fit_summary, score = engine.tailor_resume(
+                master_resume=sample_resume_data,
+                jd_text="Need distributed systems engineer.",
+                company="Globex Inc",
+                role="Staff Engineer",
+            )
+            assert tailored["name"] == "Jane Doe"
+            assert fit_summary == "Exceptional fit with distributed systems skills."
+            assert score == 96
+            mock_client.chat.completions.create.assert_called_once()
+
+
+def test_tailor_engine_provider_selection():
+    """Test provider selection and error on missing keys."""
+    # Test unsupported provider
+    engine_bad = TailorEngine(provider="unsupported_provider", api_key="test")
+    with pytest.raises(ValueError, match="Unsupported LLM provider"):
+        _ = engine_bad.client
+
+    # Test missing Gemini key
+    with patch.dict(os.environ, {"LLM_PROVIDER": "gemini"}, clear=True):
+        engine_gemini_nokey = TailorEngine()
+        with pytest.raises(ValueError, match="GEMINI_API_KEY is not set"):
+            _ = engine_gemini_nokey.client
+
+    # Test missing OpenAI key
+    with patch.dict(os.environ, {"LLM_PROVIDER": "openai"}, clear=True):
+        engine_openai_nokey = TailorEngine()
+        with pytest.raises(ValueError, match="OPENAI_API_KEY is not set"):
+            _ = engine_openai_nokey.client
+
+
 def test_notifier_message_formatting():
     """Test message format matches design.md Section 5 template."""
     notifier = Notifier(ntfy_topic="jaa_test_topic")
@@ -295,7 +377,7 @@ def test_drive_client_upload_with_mock():
 
 
 def test_pipeline_dry_run(sample_resume_data):
-    """Test running the full pipeline in dry-run mode with mocked OpenAI."""
+    """Test running the full pipeline in dry-run mode with mocked LLM engine."""
     with tempfile.TemporaryDirectory() as tmpdir:
         db_path = os.path.join(tmpdir, "test_pipeline.db")
         resume_yaml_path = os.path.join(tmpdir, "resume.yaml")

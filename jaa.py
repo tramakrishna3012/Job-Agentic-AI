@@ -98,16 +98,18 @@ def parse_args() -> argparse.Namespace:
 
 
 def read_job_description(jd_source: str) -> str:
-    """Read job description from a file or standard input."""
+    """Read job description from a file, standard input, or direct string."""
     if jd_source == "-":
         if sys.stdin.isatty():
             print("Reading Job Description from stdin. Press Ctrl+Z (Windows) or Ctrl+D (Unix) then Enter to finish:")
         jd_text = sys.stdin.read().strip()
     else:
         path = Path(jd_source)
-        if not path.exists():
-            raise FileNotFoundError(f"Job description file not found at: {jd_source}")
-        jd_text = path.read_text(encoding="utf-8").strip()
+        if path.exists() and path.is_file():
+            jd_text = path.read_text(encoding="utf-8").strip()
+        else:
+            # Treat argument directly as raw job description text
+            jd_text = jd_source.strip()
 
     if not jd_text:
         raise ValueError("Job description is empty. Please provide valid text.")
@@ -140,9 +142,10 @@ def run_pipeline(
     master_resume = tailor_engine.load_master_resume(resume_path)
     candidate_name = master_resume.get("name", "Resume")
 
-    # 2. Stage 1: Tailoring via OpenAI
-    model_name = os.getenv("OPENAI_MODEL", "gpt-4o")
-    print(f"\n[1/5] 🤖 Tailoring resume with OpenAI ({model_name}, strict truthfulness contract)...")
+    # 2. Stage 1: Tailoring via LLM Provider (OpenAI / Gemini)
+    provider_name = tailor_engine.provider.capitalize()
+    model_name = tailor_engine.active_model
+    print(f"\n[1/5] 🤖 Tailoring resume with {provider_name} ({model_name}, strict truthfulness contract)...")
     tailor_start = time.time()
     try:
         tailored_resume, fit_summary, match_score = tailor_engine.tailor_resume(
