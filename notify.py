@@ -1,9 +1,9 @@
 """
 Notifier module.
-Dispatches WhatsApp status notifications using either:
-1. CallMeBot (100% free personal WhatsApp API gateway, default)
-2. Twilio WhatsApp REST API
-using the exact template specified in design.md Section 5.
+Dispatches push/message status notifications using:
+1. ntfy.sh (100% Free, zero-signup instant push notifications to Phone & Browser, default)
+2. CallMeBot (100% Free personal WhatsApp API gateway)
+3. Twilio WhatsApp REST API
 """
 
 from __future__ import annotations
@@ -19,11 +19,14 @@ logger = logging.getLogger("jaa.notify")
 
 
 class Notifier:
-    """WhatsApp notifier supporting CallMeBot and Twilio."""
+    """Multi-provider notifier supporting ntfy, CallMeBot, and Twilio."""
 
     def __init__(
         self,
         provider: Optional[str] = None,
+        # ntfy configs
+        ntfy_topic: Optional[str] = None,
+        ntfy_server: Optional[str] = None,
         # CallMeBot configs
         callmebot_phone: Optional[str] = None,
         callmebot_api_key: Optional[str] = None,
@@ -34,6 +37,9 @@ class Notifier:
         twilio_to: Optional[str] = None,
         max_retries: int = 3,
     ) -> None:
+        self.ntfy_topic = ntfy_topic or os.getenv("NTFY_TOPIC")
+        self.ntfy_server = (ntfy_server or os.getenv("NTFY_SERVER", "https://ntfy.sh")).rstrip("/")
+
         self.callmebot_phone = callmebot_phone or os.getenv("CALLMEBOT_PHONE")
         self.callmebot_api_key = callmebot_api_key or os.getenv("CALLMEBOT_API_KEY")
 
@@ -48,13 +54,15 @@ class Notifier:
         # Auto-detect provider if not explicitly given
         if provider:
             self.provider = provider.lower()
+        elif self.ntfy_topic:
+            self.provider = "ntfy"
         elif self.callmebot_api_key and self.callmebot_phone:
             self.provider = "callmebot"
         elif self.twilio_account_sid and self.twilio_auth_token:
             self.provider = "twilio"
         else:
-            # Default to callmebot
-            self.provider = "callmebot"
+            # Default to ntfy
+            self.provider = "ntfy"
 
     @property
     def twilio_client(self):
@@ -78,7 +86,7 @@ class Notifier:
         drive_link: str,
     ) -> str:
         """
-        Format WhatsApp message following design.md Section 5:
+        Format notification message following design.md Section 5:
         ✅ Resume tailored: {Role} @ {Company}
         Match score: {score}/100
         {fit_summary}
@@ -91,6 +99,47 @@ class Notifier:
             f"📄 {drive_link}"
         )
 
+    def _send_via_ntfy(
+        self,
+        role: str,
+        company: str,
+        match_score: int,
+        fit_summary: str,
+        drive_link: str,
+    ) -> str:
+        """Send instant push notification via ntfy.sh."""
+        if not self.ntfy_topic:
+            raise ValueError(
+                "NTFY_TOPIC must be configured in your .env file (e.g. NTFY_TOPIC=jaa_alerts_yourname)."
+            )
+
+        url = f"{self.ntfy_server}/{self.ntfy_topic.strip()}"
+        body = f"Match Score: {match_score}/100\n{fit_summary}\n\n📄 {drive_link}"
+
+        # Clean ASCII-safe headers
+        headers = {
+            "Title": f"Resume Tailored: {role} @ {company}".encode("ascii", "replace").decode("ascii"),
+            "Priority": "high",
+            "Tags": "white_check_mark,page_facing_up",
+            "User-Agent": "JAA-Agent/1.0",
+        }
+        if drive_link and drive_link.startswith("http"):
+            headers["Click"] = drive_link
+
+        req = urllib.request.Request(
+            url,
+            data=body.encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+
+        with urllib.request.urlopen(req, timeout=15) as response:
+            status_code = response.getcode()
+            if status_code != 200:
+                body_resp = response.read().decode("utf-8", errors="replace")
+                raise RuntimeError(f"ntfy API error (HTTP {status_code}): {body_resp}")
+            return "ntfy_ok"
+
     def _send_via_callmebot(self, message_text: str) -> str:
         """Send message via CallMeBot free WhatsApp gateway."""
         if not self.callmebot_phone or not self.callmebot_api_key:
@@ -98,7 +147,6 @@ class Notifier:
                 "CALLMEBOT_PHONE and CALLMEBOT_API_KEY must be configured in your .env file."
             )
 
-        # Sanitize phone number (remove spaces, dashes, parentheses)
         phone = "".join(c for c in self.callmebot_phone if c.isdigit() or c == "+")
         params = {
             "phone": phone,
@@ -116,7 +164,7 @@ class Notifier:
 
         with urllib.request.urlopen(req, timeout=15) as response:
             status_code = response.getcode()
-            body = response.read().decode("utf-8")
+            body = response.read().decode("utf-8", errors="replace")
             if status_code != 200 or "error" in body.lower():
                 raise RuntimeError(f"CallMeBot API error (HTTP {status_code}): {body}")
             return "callmebot_ok"
@@ -152,7 +200,7 @@ class Notifier:
         drive_link: str,
     ) -> str:
         """
-        Send WhatsApp notification with retry backoff.
+        Send notification with retry backoff.
         Returns the notification reference ID.
         """
         body = self.format_message(
@@ -166,7 +214,17 @@ class Notifier:
         last_exception: Optional[Exception] = None
         for attempt in range(1, self.max_retries + 1):
             try:
-                if self.provider == "callmebot":
+                if self.provider == "ntfy":
+                    ref_id = self._send_via_ntfy(
+                        role=role,
+                        company=company,
+                        match_score=match_score,
+                        fit_summary=fit_summary,
+                        drive_link=drive_link,
+                    )
+                    logger.info("Notification delivered via ntfy.sh")
+                    return ref_id
+                elif self.provider == "callmebot":
                     ref_id = self._send_via_callmebot(body)
                     logger.info("WhatsApp notification delivered via CallMeBot")
                     return ref_id
@@ -185,5 +243,5 @@ class Notifier:
                     time.sleep(2**attempt)
 
         raise RuntimeError(
-            f"Failed to send WhatsApp notification via {self.provider} after {self.max_retries} attempts: {last_exception}"
+            f"Failed to send notification via {self.provider} after {self.max_retries} attempts: {last_exception}"
         ) from last_exception

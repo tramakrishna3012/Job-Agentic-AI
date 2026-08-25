@@ -1,7 +1,7 @@
 """
 Comprehensive test suite for Phase 0 JAA Pipeline.
 Tests SQLite tracker, Jinja2 template rendering, PDF generation,
-master resume schema validation, Notifier (CallMeBot + Twilio), DriveClient, and CLI flow.
+master resume schema validation, Notifier (ntfy + CallMeBot + Twilio), DriveClient, and CLI flow.
 """
 
 from __future__ import annotations
@@ -182,11 +182,8 @@ def test_jd_hash_generation():
 
 
 def test_notifier_message_formatting():
-    """Test WhatsApp message format matches design.md Section 5 template."""
-    notifier = Notifier(
-        callmebot_phone="+1234567890",
-        callmebot_api_key="key123",
-    )
+    """Test message format matches design.md Section 5 template."""
+    notifier = Notifier(ntfy_topic="jaa_test_topic")
     msg = notifier.format_message(
         role="Backend Engineer",
         company="Acme Corp",
@@ -201,6 +198,28 @@ def test_notifier_message_formatting():
         "📄 https://drive.google.com/file/d/123/view"
     )
     assert msg == expected
+
+
+def test_ntfy_notifier_send_with_mock():
+    """Test ntfy push notification dispatch with mocked HTTP request."""
+    notifier = Notifier(
+        provider="ntfy",
+        ntfy_topic="jaa_alerts_test",
+    )
+    mock_response = MagicMock()
+    mock_response.getcode.return_value = 200
+    mock_response.read.return_value = b'{"id":"123","event":"message"}'
+    mock_response.__enter__.return_value = mock_response
+
+    with patch("urllib.request.urlopen", return_value=mock_response):
+        ref_id = notifier.send_notification(
+            role="Backend Engineer",
+            company="Acme Corp",
+            match_score=95,
+            fit_summary="ntfy fit summary.",
+            drive_link="https://drive.google.com/file/d/123/view",
+        )
+        assert ref_id == "ntfy_ok"
 
 
 def test_callmebot_notifier_send_with_mock():
@@ -267,7 +286,7 @@ def test_drive_client_upload_with_mock():
         mock_media.return_value = MagicMock()
         drive._service = mock_service
         file_id, link = drive.upload_or_update_resume(
-            local_pdf_path="resume.yaml",  # existing file for existence check
+            local_pdf_path="resume.yaml",
             company="Globex Corp",
             candidate_name="Jane Doe",
         )
